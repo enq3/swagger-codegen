@@ -11,6 +11,10 @@ import org.apache.oltu.oauth2.client.request.OAuthClientRequest.AuthenticationRe
 import org.apache.oltu.oauth2.client.request.OAuthClientRequest.TokenRequestBuilder;
 {{#joda}}
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDate;
+import android.support.annotation.Nullable;
 {{/joda}}
 {{#threetenbp}}
 import org.threeten.bp.format.DateTimeFormatter;
@@ -51,7 +55,6 @@ public class ApiClient {
 
   public ApiClient() {
     apiAuthorizations = new LinkedHashMap<String, Interceptor>();
-    createDefaultAdapter();
   }
 
   public ApiClient(String[] authNames) {
@@ -127,11 +130,10 @@ public class ApiClient {
       .setPassword(password);
   }
 
-  public void createDefaultAdapter() {
+  public void createDefaultAdapter(String baseUrl, OkHttpClient.Builder builder) {
     json = new JSON();
-    okBuilder = new OkHttpClient.Builder();
+    okBuilder = builder;
 
-    String baseUrl = "{{{basePath}}}";
     if (!baseUrl.endsWith("/"))
       baseUrl = baseUrl + "/";
 
@@ -143,6 +145,9 @@ public class ApiClient {
       {{/useRxJava}}{{#useRxJava2}}
       .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
       {{/useRxJava2}}
+      {{#joda}}
+      .addConverterFactory(DateTimeConverterFactory.create())
+      {{/joda}}
       .addConverterFactory(ScalarsConverterFactory.create())
       .addConverterFactory(GsonCustomConverterFactory.create(json.getGson()));
   }
@@ -418,3 +423,42 @@ class GsonCustomConverterFactory extends Converter.Factory
     return gsonConverterFactory.requestBodyConverter(type, parameterAnnotations, methodAnnotations, retrofit);
   }
 }
+{{#joda}}
+class DateTimeConverterFactory extends Converter.Factory {
+  private DateTimeConverterFactory(){}
+
+  private static DateTimeConverterFactory instance_;
+
+  static DateTimeConverterFactory create() {
+    if (instance_ == null) {
+      instance_ = new DateTimeConverterFactory();
+    }
+    return instance_;
+  }
+
+  @Override
+  public Converter<?, String> stringConverter(Type type, Annotation[] annotations, Retrofit retrofit) {
+    if(type == DateTime.class) return new DateTimeConverterToString();
+    if(type == LocalDate.class) return new LocalDateConverterToString();
+    return super.stringConverter(type, annotations, retrofit);
+  }
+
+  class DateTimeConverterToString implements Converter<DateTime, String> {
+
+    @Override
+    public String convert(@Nullable DateTime value) throws IOException {
+      if (value == null) return null;
+      return value.withZone(DateTimeZone.UTC).toString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    }
+  }
+
+  class LocalDateConverterToString implements Converter<DateTime, String> {
+
+    @Override
+    public String convert(@Nullable DateTime value) throws IOException {
+      if (value == null) return null;
+      return value.withZone(DateTimeZone.UTC).toString("yyyy-MM-dd'T00:00:00Z'");
+    }
+  }
+}
+{{/joda}}
