@@ -452,12 +452,12 @@ class DateTimeConverterFactory extends Converter.Factory {
     }
   }
 
-  class LocalDateConverterToString implements Converter<DateTime, String> {
+  class LocalDateConverterToString implements Converter<LocalDate, String> {
 
     @Override
-    public String convert(@Nullable DateTime value) throws IOException {
+    public String convert(@Nullable LocalDate value) throws IOException {
       if (value == null) return null;
-      return value.withZone(DateTimeZone.UTC).toString("yyyy-MM-dd'T00:00:00Z'");
+      return value.toString("yyyy-MM-dd'T00:00:00Z'");
     }
   }
 }
